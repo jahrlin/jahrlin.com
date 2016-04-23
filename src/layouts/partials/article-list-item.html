@@ -1,0 +1,32 @@
+{{ $dateMissing := eq .Date.Year 1}}
+<article class="list-item row" itemscope itemtype="http://schema.org/Blog">
+    <div class="col-xs-1 offset-xs-2">
+        <time class="list-item__meta">
+            {{ if eq $dateMissing false }}
+            <div class="list-item__day">
+                {{ .Date.Format "02" }} 
+            </div>
+            <div class="list-item__month">
+                {{ .Date.Format "January" }}
+            </div>
+            <div class="list-item__year">
+                {{ .Date.Format "2006" }}
+            </div>
+            {{ end }}
+        </time>
+    </div>
+    <div class="col-xs-8 offset-xs-1">  
+        <div class="row">
+            <div class="col-xs-12">
+                <h2 class="list-item__heading" itemprop="headline">
+                    <a class="list-item__link" href="{{ .RelPermalink }}">
+                        {{ .Title }}{{ if .Draft }} (Draft){{ end }}
+                    </a>
+                </h2>
+                <section class="list-item__text">
+                    {{ .Summary }}
+                </section>
+            </div>
+        </div>
+    </div>
+</article>

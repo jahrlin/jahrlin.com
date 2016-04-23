@@ -1,0 +1,69 @@
+baseurl = "https://merky.io/"
+languageCode = "en-us"
+title = "merky.io"
+
+MetaDataFormat = "toml"
+theme = "base16"
+paginate = 3
+PaginatePath = "/"
+
+[author]
+    name = "Joakim Ahrlin" 
+[permalinks]
+
+    # Permalink format for pages.
+    page = "/:title/"
+
+    # Permalink format for blog posts.
+    post = "/:title/"
+
+[params]
+
+    # Change the color scheme of Slender.
+    # See above for preview and list of color schemes.
+    #colorscheme = "white"
+
+    # Tagline; HTML accepted here. Keep it concise.
+    tagline = "developer stuff"
+
+    # Footer; Markdown accepted here.
+    footer = "Copyright 2016 &copy; Joakim Ahrlin"
+
+    # Description and keywords for <meta> tags.
+    # Remember to set this for your main page.
+    # This will be overridden by whatever is set by the page or post,
+    # defined by `description` and `keywords` variables in the front matter
+    # of the markdown file.
+    description = "Default Page Description"
+    keywords = "default,page,keywords"
+
+    # Social links, must be full URLs (e.g. https://github.com/CrimsonRay/).
+    # Remove, comment, or leave blank any field to leave them out.
+    #email = "mailto:your-email"
+    github = "https://github.com/jahrlin/"
+    #bitbucket = "url-to-your-bitbucket"
+    #twitter = "url-to-your-twitter"
+    #stackoverflow = "url-to-your-stackoverflow"
+    #linkedin = "url-to-your-linkedin"
+    #facebook = "url-to-your-facebook"
+
+    # Google Analytics
+    # Remove, comment, or leave it blank if you don't have one.
+    ganalytics = "UA-76198254-1"
+
+[menu]
+
+    # Menu for the nav bar.
+    # There must always be one item present (e.g. home).
+    [[menu.main]]
+    identifier = "home"
+    name       = "home"
+    url        = "/"
+    weight     = 0
+
+    [[menu.main]]
+    identifier = "about"
+    name       = "about"
+    url        = "/about/"
+    weight     = 1
+
