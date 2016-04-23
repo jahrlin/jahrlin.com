@@ -193,8 +193,10 @@ ssh username@yourhost.com
 ```sh
 $ sudo apt-get update
 $ sudo apt-get -y upgrade
+$ cd /opt/
 $ sudo curl -O https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz
 $ sudo tar -xvf go1.6.linux-amd64.tar.gz
+$ cd ~
 $ mkdir ~/go
 ```
     
@@ -206,7 +208,7 @@ Edit your `~/.profile`
 # ~/.profile
 # add these at the END of the file
 
-export GOROOT=/usr/local/go
+export GOROOT=/opt/go
 export GOPATH=$HOME/go
 export PATH=$PATH:$GOROOT/bin
 ```
@@ -267,5 +269,51 @@ $ vim hooks.json
     }
 ]
 ```
+
+### Set up proxy/load balancer, LetsEncrypt automatic create/rnew SSL
+We will use [this awesome image](https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion) for the LetsEncrypt ACME.
+
+```bash
+# This is where our certificates will be stored
+$ sudo mkdir /etc/nginx/certs -p
+# The template config file for the virtualhosts
+$ touch /etc/nginx/vhost.d
+# This is where the image puts challenge files for LetsEncrypt to verify
+$ sudo mkdir /usr/share/nginx/html -p
+```
+
+Now run the nginx proxy container with these mounted as volumes
+
+```bash
+$ docker run -d -p 80:80 -p 443:443 \
+    --name nginx-proxy \
+    -v /path/to/certs:/etc/nginx/certs:ro \
+    -v /etc/nginx/vhost.d \
+    -v /usr/share/nginx/html \
+    -v /var/run/docker.sock:/tmp/docker.sock:ro \
+    jwilder/nginx-proxy
+```
+
+Run the ACME container
+
+```bash
+$ docker run -d \
+    -v /path/to/certs:/etc/nginx/certs:rw \
+    --volumes-from nginx-proxy \
+    -v /var/run/docker.sock:/var/run/docker.sock:ro \
+    jrcs/letsencrypt-nginx-proxy-companion
+``` 
+
+Now start your website container, make sure to add `-e`-variables for `LETSENCRYPT_HOST` and `LETSENCRYPT_EMAIL` to make sure certificate creation works.
+
+```bash
+$ docker run -d -e "VIRTUAL_HOST=jahrlin.com" -e "LETSENCRYPT_HOST=jahrlin.com" -e "LETSENCRYPT_EMAIL" -p 443 <dockerrepo/buildname>
+```
+
+HSTS is enabled by default so any http requests will be redirected to https.
+```
+
+```
+
 
 Inspired by https://blog.gopheracademy.com/advent-2014/easy-deployment/

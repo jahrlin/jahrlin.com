@@ -1,6 +1,6 @@
-baseurl = "https://merky.io/"
+baseurl = "https://jahrlin.com/"
 languageCode = "en-us"
-title = "merky.io"
+title = "jahrlin.com"
 
 MetaDataFormat = "toml"
 theme = "base16"
