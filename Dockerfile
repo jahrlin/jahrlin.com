@@ -19,7 +19,7 @@ ENV PATH $PATH:$GOROOT/bin:$GOPATH/bin
 RUN go get -v github.com/spf13/hugo
 RUN go install github.com/spf13/hugo
 
-ADD site-source /site-source
+ADD src /site-source
 RUN cd /site-source && \
     hugo
 
