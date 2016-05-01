@@ -34,8 +34,8 @@ PaginatePath = "/"
     # This will be overridden by whatever is set by the page or post,
     # defined by `description` and `keywords` variables in the front matter
     # of the markdown file.
-    description = "Default Page Description"
-    keywords = "default,page,keywords"
+    description = ""
+    keywords = ""
 
     # Social links, must be full URLs (e.g. https://github.com/CrimsonRay/).
     # Remove, comment, or leave blank any field to leave them out.
