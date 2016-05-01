@@ -1,11 +1,11 @@
 +++
 date = "2016-04-09T17:35:39+02:00"
-description = "A walkthrough of setting up automatic website deploys to a docker host on Azure running nginx with githooks"
-keywords = ["docker", "git", "azure", "docker container", "docker host",
+description = "A walkthrough of setting up automatic website deploys to a docker host on Azure running nginx and SSL with webhooks"
+keywords = ["docker", "git", "azure", "docker container", "docker host", "ssl", "letsencrypt",
 "automatic deploy", "nginx", "docker image", "webhook", "web hook"]
-title = "automatic website deploys with git, docker and nginx hosted on Azure"
-
+title = "automatic website deploys with git, docker, nginx and ssl hosted on Azure"
 +++
+
 This post will help you set up a workflow that will automatically deploy new
 content to your website when your push to you git repository.
 
@@ -13,72 +13,39 @@ It assumes you are familiar with the concept of git, Linux, some basic bash
 scripting and Docker. I've written a primer on [how Docker
 works](/introduction-to-docker/) if you need a
 quick introduction or recap.
-<!--more-->
+
 ## Quick steps
-1. Create Github repository
-- Create a Dockerfile in repository
-- Create Docker account
-    - Link Github account
-- Create Docker automated build
-    - Select Auto-build Github
-    - Choose repository created in step 1
-- Verify by pushing to repository and checking build status in Docker hub
-- Set up a docker host (in Azure for example)
-    - Install and run nginx proxy
-    - `docker pull <buildname from step 4>`
-    - `docker run -d -p 80 -e VIRTUAL_HOST=<websitehostname>`
-    - Install Go and webhook, set up configurations
-    - `go/bin/webhook -hooks hooks.json -verbose`
-- In the Docker hub, add a webhook to your Docker build with URL of docker host + webhook path
-- Verify everything by pushing a change in your website to github, time depends
-  mostly on how busy the Docker hub is
+1. Set up a docker host
+- Create a website container
+- Create Docker automated build and connect to Github repo
+- Set up webhook listener on host, add webhook to Docker build
 
 ## Workflow
 After all the of the above is done, the workflow is:
 
-1. git clone repository
-- do some work
-- commit and push to remote
+1. Commit and push to github remote
 - Github service integration will poke Docker hub that this repo has been updated
-- Docker starts automatic builds that subscribe to the github repo
-- Docker webhook makes a request to our Docker host web hook listener that
-  starts our deployment script
-    - pulls the latest build
-        - this will run the Dockerfile in the repository that compiles the
-          updated static content for the website
-    - runs it as a docker container with VIRTUAL_HOST set
-    - nginx-proxy adds the container to the pool of servers, now serves both old
-      and new content á la round robin
-    - kill old docker container
-    - nginx-proxy now only serves the new content 
+- Docker automatic build will activate our web hook 
+- Docker host will pull the latest build and replace old website containers with the new one.
 
 ## Environment 
 The enviroment consists of:
+
 ### Docker host 
-> A docker host is basically a virtual machine with some docker tools
-installed. 
+The host run a web hook listener, the website container, an nginx proxy and a LetsEncrypt ACME container.
 
 I'm running a Ubuntu 15.10 server in Azure. 
 [Here's a virtual machine
 template](https://azure.microsoft.com/en-us/marketplace/partners/canonicalandmsopentech/dockeronubuntuserver1404lts/) from Microsoft that deploys the server and
 installs Docker Engine, which turns it into a docker host.
 
-The host  will in turn be running a few docker containers that are a kind of
-nested virtual machine.
-
-The docker host will run:
-
-- an nginx proxy (a docker container)
-- our custom docker image that contains the website files, all served by nginx
-- webhook listener 
-
 ### nginx proxy
 We will be using [this image](https://github.com/jwilder/nginx-proxy)
-to make sure we can run multiple clones of our website in a load balanced
+to make sure we can run multiple instances of our website in a load balanced
 round-robin configuration.
 
 This tool will automatically include all webservers with the same
-`VIRTUAL_HOST`-environment variable in it's request routing.
+`VIRTUAL_HOST`-environment variable in its request routing.
 
 This is required when deployment happens because we will start a new container
 that serves the updated website while the old one is still running.
@@ -115,15 +82,18 @@ their IDs to a variable
 3. Start a new container from the latest image via `docker run`
 4. Shut down the old container that we listed in step 1 via `docker kill`
 
+### LetsEncrypt ACME container
+This container will automate certificate creation/renewal.
+
 ## Setting up automatic deploys
-### Github repository
+
+### Website container 
 First of all you need a Github or Bitbucket repository for your website.
 
 Create the repository and add a `Dockerfile` to it. This file will tell docker
 what kind of scaffolding and configuration your web application container needs.
 The last line of the file also tells it what command to run to keep the
 container running.
-
 Here's mine:
 ```
 # use the nginx image from docker
@@ -169,6 +139,7 @@ RUN cp -R /site-source/public /app/
 ADD nginx.conf /etc/nginx/nginx.conf
 
 # make sure we expose port 80, required by our nginx proxy
+# SSL is terminated on the proxy, not the container
 EXPOSE 80
 
 # run the nginx server
@@ -176,9 +147,19 @@ EXPOSE 80
 CMD ["/usr/sbin/nginx"]
 ```
 
-## Set up a docker host
-I've used [this
-image](https://azure.microsoft.com/en-us/marketplace/partners/canonicalandmsopentech/dockeronubuntuserver1404lts/) for running my server in Azure, there's probably plenty
+### Docker automated build
+Now that our container is ready we need to set up an automated build in the [Docker hub](https://hub.docker.com/).
+
+Go to your [Linked Accounts & Services](https://hub.docker.com/account/authorized-services/) and click "Link Github". Follow the steps to connect the Docker hub with your Github account.
+
+Create a new automated build and select "Create Auto-build Github" and select the repository where you created the Dockerfile.
+
+Every time you push to that repository Docker hub will build your image and trigger any webhooks you set up.
+
+### Docker host
+
+I've used [this image](https://azure.microsoft.com/en-us/marketplace/partners/canonicalandmsopentech/dockeronubuntuserver1404lts/) 
+for running my server in Azure, there's probably plenty
 more for other providers (AWS, DigitalOcean, Heroku, Google Cloud Platform, etc)
 
 Deploy your host and then ssh to it:
@@ -188,7 +169,6 @@ ssh username@yourhost.com
 ```
 
 ### Install Go
-
 
 ```sh
 $ sudo apt-get update
@@ -217,7 +197,7 @@ export PATH=$PATH:$GOROOT/bin
 ```bash
 $ go get github.com/adnanh/webhook
 ```
-#### Set up deployment script
+#### Create deployment script
 ```bash
 $ mkdir ~/scripts
 $ vim ~/scripts/deploy.sh
@@ -270,8 +250,14 @@ $ vim hooks.json
 ]
 ```
 
-### Set up proxy/load balancer, LetsEncrypt automatic create/rnew SSL
-We will use [this awesome image](https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion) for the LetsEncrypt ACME.
+#### Add webhook trigger to Docker build
+Go to your automated build details in the Docker hub and select the Webhooks-tab.
+
+Add a new one called "Deploy" and the set url to: `http://your-host-ip:9000/hooks/deployment-webhook`
+
+### Set up proxy/load balancer, LetsEncrypt automatic create/renew SSL
+
+We'll use [this awesome image](https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion) for the LetsEncrypt ACME.
 
 ```bash
 # This is where our certificates will be stored
@@ -293,7 +279,6 @@ $ docker run -d -p 80:80 -p 443:443 \
     -v /var/run/docker.sock:/tmp/docker.sock:ro \
     jwilder/nginx-proxy
 ```
-
 Run the ACME container
 
 ```bash
@@ -310,10 +295,13 @@ Now start your website container, make sure to add `-e`-variables for `LETSENCRY
 $ docker run -d -e "VIRTUAL_HOST=jahrlin.com" -e "LETSENCRYPT_HOST=jahrlin.com" -e "LETSENCRYPT_EMAIL" -p 443 <dockerrepo/buildname>
 ```
 
-HSTS is enabled by default so any http requests will be redirected to https.
+Start the webhook listener
+
+```bash
+$ go/bin/webhook -hooks hooks.json -verbose
 ```
 
-```
-
+Test it by pushing a change to your Github repository, check the build status in Docker hub (usually takes a few minutes)
+and watch your host console. If everything is correctly configured your website will be updated.
 
 Inspired by https://blog.gopheracademy.com/advent-2014/easy-deployment/
