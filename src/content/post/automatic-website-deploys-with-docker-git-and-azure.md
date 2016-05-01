@@ -13,7 +13,7 @@ It assumes you are familiar with the concept of git, Linux, some basic bash
 scripting and Docker. I've written a primer on [how Docker
 works](/introduction-to-docker/) if you need a
 quick introduction or recap.
-
+<!--more-->
 ## Quick steps
 1. Set up a docker host
 - Create a website container

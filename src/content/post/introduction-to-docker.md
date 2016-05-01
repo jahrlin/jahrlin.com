@@ -5,7 +5,7 @@ keywords = ["docker", "introduction", "docker host", "docker image", "docker con
 title = "introduction to docker"
 +++
 I was inspired to write this post when working on my [automatic website
-deploys](/automatic-website-deploys-with-git-docker-and-nginx-hosted-on-azure/) that utilizes docker.
+deploys](/automatic-website-deploys-with-git-docker-nginx-and-ssl-hosted-on-azure/) that utilizes docker.
 
 This was my first time using docker and it was pretty confusing getting my head
 around what docker is and what all the different parts are. I realize that my
